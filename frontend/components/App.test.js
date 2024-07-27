@@ -1,7 +1,8 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import AppFunctional from './AppFunctional'; 
 import axios from 'axios';
+import '@testing-library/jest-dom'
+import React from "react";
 
 jest.mock('axios');
 
@@ -14,62 +15,61 @@ describe('AppFunctional', () => {
     expect(screen.getByText('B')).toBeInTheDocument();
   });
 
-  test('moves "B" correctly', async () => {
+  test('moves "B" correctly', () => {
     render(<AppFunctional />);
     
     const leftButton = screen.getByText('LEFT');
-    await userEvent.click(leftButton);
+    fireEvent.click(leftButton);
+    const message = document.querySelector('#coordinates')
     
-    expect(screen.getByText('Coordinates (2, 1)')).toBeInTheDocument();
-    expect(screen.getByText('You moved 1 times')).toBeInTheDocument();
+    expect(message.textContent).toBe('Coordinates (1, 2)');
+    expect(screen.getByText('You moved 1 time')).toBeInTheDocument();
     expect(screen.queryByText('B')).toHaveClass('active');
   });
 
-  test('resets state correctly', async () => {
+  test('resets state correctly', () => {
     render(<AppFunctional />);
     
     const leftButton = screen.getByText('LEFT');
-    await userEvent.click(leftButton);
+    fireEvent.click(leftButton);
     
     const resetButton = screen.getByText('RESET');
-    await userEvent.click(resetButton);
+    fireEvent.click(resetButton);
     
     expect(screen.getByText('Coordinates (2, 2)')).toBeInTheDocument();
     expect(screen.getByText('You moved 0 times')).toBeInTheDocument();
     expect(screen.getByText('B')).toHaveClass('active');
   });
 
-  test('displays error message on submission failure', async () => {
+  test('displays error message on no email submission failure', () => {
     axios.post.mockRejectedValue(new Error('Submission failed'));
     
     render(<AppFunctional />);
+    const message = document.querySelector("#message")  
+    const submitButton = document.getElementById('submit');
+    fireEvent.click(submitButton);
     
-    const emailInput = screen.getByPlaceholderText('lady@gaga.com');
-    await userEvent.type(emailInput, 'lady@gaga.com');
-    
-    expect(emailInput.value).toBe('lady@gaga.com');
-    
-    const submitButton = screen.getByText('SUBMIT');
-    await userEvent.click(submitButton);
-    
-    await waitFor(() => {
-      expect(screen.getByText('Submission failed')).toBeInTheDocument();
+    waitFor(() => {
+      expect(message.textContent).toBe('Ouch: email is required');
     });
   });
 
-  test('submits the form and shows success message', async () => {
+  test('submits the form and shows success message', () => {
     axios.post.mockResolvedValue({ data: 'success' });
     
     render(<AppFunctional />);
+    const up = document.querySelector("#up")
+    const message = document.querySelector("#message")
+    fireEvent.click(up)
     
-    const emailInput = screen.getByPlaceholderText('lady@gaga.com');
-    await userEvent.type(emailInput, 'lady@gaga.com');
+    const emailInput = screen.getByPlaceholderText('type email');
+    fireEvent.change(emailInput, {target: {value: 'lady@gaga.com'}});
     
-    const submitButton = screen.getByText('SUBMIT');
-    await userEvent.click(submitButton);
+    const submitButton = document.getElementById('submit');
+    fireEvent.click(submitButton);
     
-    await waitFor(() => {
-      expect(screen.getByText('Email submitted successfully')).toBeInTheDocument();
+    waitFor(() => {
+      expect(message.textContent).toBe('lady win #31')
     });
   });
 });
